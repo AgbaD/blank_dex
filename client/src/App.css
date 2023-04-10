@@ -2,7 +2,7 @@
   text-align: center;
 }
 
-header {
+.header {
   height: 100px;
   display: flex;
   justify-content: space-between;
@@ -78,6 +78,11 @@ header {
 .link {
   text-decoration: none;
   color: white;
+}
+
+.body {
+  display: flex;
+  justify-content: center;
 }
 
 .tradeBox {
