@@ -2,6 +2,7 @@ const express = require("express");
 const Moralis = require("moralis").default;
 const app = express();
 const cors = require("cors");
+const axios = require('axios');
 require("dotenv").config();
 const { EvmChain } = require("@moralisweb3/common-evm-utils");
 
@@ -30,6 +31,22 @@ app.get("/tokenPrice", async (req, res) => {
     data: usdPrices
   });
 });
+
+app.get("/tokenInfo", async (req, res) => {
+  const { query } = req;
+  const tokens = { ...query.symbols }
+  const chain = EvmChain.ETHEREUM;
+  for (let i = 0; i < query.symbols.length; i++) {
+    const r = await Moralis.EvmApi.token.getTokenPrice({
+      "address": query.symbols[i].address,
+      chain
+    });
+    tokens[i].price = r.raw.usdPrice
+  }
+  return res.status(200).json({
+    data: tokens
+  });
+})
 
 
 const startServer = async () => {

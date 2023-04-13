@@ -6,8 +6,10 @@ import {
 } from '@ant-design/icons';
 import tokenList from '../tokenList.json';
 import axios from 'axios';
+import { useSendTransaction, useWaitForTransaction } from 'wagmi';
 
-function Swap() {
+function Swap(props) {
+  const { address, isConnected } = props
   const [slippage, setSlippage] = useState(2.5);
   const [tokenOneAmount, setTokenOneAmount] = useState(null);
   const [tokenTwoAmount, setTokenTwoAmount] = useState(null);
@@ -16,6 +18,25 @@ function Swap() {
   const [isOpen, setIsOpen] = useState();
   const [changeToken, setChangeToken] = useState(1);
   const [prices, setPrices] = useState(null);
+  const [messageApi, contextHolder] = message.useMessage()
+  const [txnDetails, setTxnDetails] = useState({
+    to: null,
+    data: null,
+    value: null,
+  })
+
+  const { data, sendTransaction } = useSendTransaction({
+    request: {
+      from: address,
+      to: String(txnDetails.to),
+      data: String(txnDetails.data),
+      value: String(txnDetails.value),
+    }
+  })
+
+  const { isLoading, isSuccess } = useWaitForTransaction({
+    hash: data?.hash
+  })
 
   const backendServer = "http://localhost:3001"
 
@@ -70,9 +91,63 @@ function Swap() {
     setPrices(resp.data.data)
   }
 
+  async function fetchDexSwap() {
+    // first check the amout of tokens allowed to spend
+    const url = `https://api.1inch.io/v5.0/1/approve/allowance?tokenAddress=${tokenOne.address}&walletAddress=${address}`
+    const allowance = await axios.get(url)
+    console.log(allowance.data)
+    if (allowance.data.allowance === "0") {
+      const approveUrl = `https://api.1inch.io/v5.0/1/approve/transaction?tokenAddress=${tokenOne.address}`
+      const approve = await axios.get(approveUrl)
+      setTxnDetails(approve.data)
+      console.log('not approved')
+      return
+    }
+    // console.log('make swap')
+    const swapUrl = `https://api.1inch.io/v5.0/1/swap?fromTokenAddress=${tokenOne.address}&toTokenAddress=${tokenTwo.address}&amount=${tokenOneAmount.padEnd(tokenOne.decimals+tokenOneAmount, '0')}&fromAddress=${address}&slippage=${slippage}`
+    const tx = await axios.get(swapUrl)
+    let decimals = Number(`1E${tokenTwo.decimals}`)
+    setTokenTwoAmount((Number(tx.data.toTokenAmount) / decimals).toFixed(2))
+    setTxnDetails(tx.data.tx)
+  }
+
   useEffect(() => {
     fetchPrices(tokenList[0].address, tokenList[1].address);
   }, [])
+
+  useEffect(() => {
+    if (txnDetails.to && isConnected) {
+      sendTransaction();
+    }
+  }, [txnDetails])
+
+  useEffect(() => {
+    messageApi.destroy()
+    if (isLoading) {
+      messageApi.open({
+        type: 'loading',
+        content: 'Transaction is pending',
+        duration: 0
+      })
+    }
+  }, [isLoading])
+
+  useEffect(() => {
+    messageApi.destroy()
+    if (isSuccess) {
+      message.open({
+        type: 'success',
+        content: 'Transaction is successful',
+        duration: 1.5
+      })
+    } else if (txnDetails.to) {
+      messageApi.open({
+        type: 'error',
+        content: 'Transaction failed',
+        duration: 1.5
+      })
+    }
+  }, [isSuccess])
 
   const settings = (
     <>
@@ -89,6 +164,7 @@ function Swap() {
 
   return (
     <>
+    {contextHolder}
     <Modal
       open={isOpen}
       footer={null}
@@ -140,7 +216,7 @@ function Swap() {
 
       </div>
 
-      <div className='swapButton' disabled={!tokenOneAmount}>Swap</div>
+      <div className='swapButton' disabled={!tokenOneAmount || !isConnected} onClick={fetchDexSwap}>Swap</div>
 
     </div>
     </>

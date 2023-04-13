@@ -17,9 +17,10 @@ function App() {
 
   return (
     <div className="App">
-      <Header swapPage={setSwapPage} handleSetSwapPage={handleSetSwapPage}/>
+      <Header swapPage={setSwapPage} handleSetSwapPage={handleSetSwapPage}
+      connect={connect} isConnected={isConnected} address={address}/>
       <div className="body">
-        {swapPage === true ? ( <Swap /> ): (
+        {swapPage === true ? ( <Swap isConnected={isConnected} address={address}/> ): (
           <Token />
         )}
       </div>
