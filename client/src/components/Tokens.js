@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import tokenList from '../tokenList.json';
 import axios from 'axios';
+import { Space, Table, Tag } from 'antd';
 
 
 function Tokens() {
@@ -17,12 +18,47 @@ function Tokens() {
     const resp = await axios.get(url, {
       params: {symbols: symbols}
     })
-    console.log(resp.data.data)
-    setTokenInfo(resp.data)
+    const data = resp.data.data
+    console.log(data)
+    setTokenInfo(data)
   }
 
-  useEffect(() => {
-    fetchTokensInfo()
+  function playWithTokenInfo() {
+    console.log(Object.keys(tokenInfo))
+  }
+
+  const columns = [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text) => <a>{text}</a>,
+    },
+    {
+      title: 'Ticker',
+      dataIndex: 'ticker',
+      key: 'ticker',
+    },
+    {
+      title: 'Price',
+      dataIndex: 'price',
+      key: 'price',
+    }
+  ];
+  const data = [
+    {
+      key: '1',
+      name: 'John Brown',
+      age: 32,
+      address: 'New York No. 1 Lake Park',
+      tags: ['nice', 'developer'],
+    }
+  ];
+  const table = () => <Table columns={columns} dataSource={data} />;
+
+  useEffect(async () => {
+    await fetchTokensInfo()
+    playWithTokenInfo()
   }, [])
 
   return (
